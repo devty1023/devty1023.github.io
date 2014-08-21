@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>understanding y-combinator, part 1</h1>
+
+            <div class="info">
+    Posted on June 15, 2014
+    
+        by devty
+    
+</div>
+
+<p>A journey through functional programming warrants a visit to lambda calculus.</p>
+<p>One beautiful artifact in lambda calculus is the y-combinator. In my struggle to see the beauty in what a first seems like an impossibly complex idea, I came across <a href="http://mvanier.livejournal.com/2897.html">a fantastic article</a> by <a href="http://mvanier.livejournal.com/">mvanier</a>. It is not a short read, but the writing is readable to any novice audience like me who’s having difficulty grasping more vigorous treatment of the topic.</p>
+<p>This is my two cents in trying to aid other programmers in their journey to understand y-combinator. This is essentially a summary/note I’ve taken while reading the aforementioned article, and I’ve rewritten the codes which are originally written in schemer in haskell. I found all the “<a href="http://xkcd.com/297/">parentheses</a>” rendered each code snippet extremely straining and wanted to see if haskell-rewrite could lessen the effort required to grasp the code idea behind each one. Note that the following sections directly mirrors the ones from the original article - if any of the following notes feels lacking, please do look up the original article for a more complete write up.</p>
+<h2 id="a-puzzle">a puzzle</h2>
+<p>Most introductions to haskell’s tries to demonstrate the immense awesomeness of recursion. I think I can safely say that most programmers had at least once written the recursive functions <code>factorial</code> and <code>fibonacci</code>. Here is a haskell version:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- returns n!</span>
+<span class="ot">factorial ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+factorial <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+factorial n <span class="fu">=</span> n <span class="fu">*</span> factorial (n<span class="fu">-</span><span class="dv">1</span>)
+
+<span class="co">-- returns nth term of the fib sequence where</span>
+<span class="co">-- fib 0 = 1 and fib 1 = 1</span>
+<span class="ot">fib ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fib <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+fib <span class="dv">1</span> <span class="fu">=</span> <span class="dv">1</span>
+fib n <span class="fu">=</span> fib (n<span class="fu">-</span><span class="dv">1</span>) <span class="fu">+</span> fib (n<span class="fu">-</span><span class="dv">2</span>)</code></pre>
+<p>We categorize these functions as recursive because the definition of such functions contains a call to itself. Such functions definitions are termed <em>explicitly recursive definition</em>.</p>
+<p>Let’s try to go a bit deeper. Our puzzle is this - can we define such recursive functions (like <code>factorial</code>) without making an explicit recursive call in its definition?</p>
+<h2 id="abstracting-out-recursive-function-calls">abstracting out recursive function calls</h2>
+<p>For concreteness, let’s start looking at our explicitly recursive definition of <code>factorial</code>. For the sake of our article, I’m going to redefine our <code>factorial</code> function as follows:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>) 
+           <span class="kw">then</span> <span class="dv">1</span>
+           <span class="kw">else</span> n <span class="fu">*</span> factorial (n<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>This is the exactly the same definition from the one before but mirrors the Scheme code in the original article.</p>
+<p>Our first attempt at eliminating the “explicitness” is to salvage the body of the code from the offending parts. In our definition, the offender is our call to <code>fact</code>. Let’s eliminate it!</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>) 
+           <span class="kw">then</span> <span class="dv">1</span>
+           <span class="kw">else</span> n <span class="fu">*</span> <span class="fu">&lt;???&gt;</span> (n<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>Not impressive at all, but this shifts our attention to another idea - what should we replace <code>&lt;???&gt;</code> with? To quote from the original author:</p>
+<p><em>“It’s a tried-and-true principle of functional programming that if you don’t know exactly what you want to put somewhere in a piece of code, just abstract it out and make it a parameter of a function.”</em>.</p>
+<p>Let’s do exactly that.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">almostFact ::</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>) <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+almostFact f n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>) 
+                        <span class="kw">then</span> <span class="dv">1</span>
+                        <span class="kw">else</span> n <span class="fu">*</span> f (n<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>Here we have defined a function that takes additional argument <code>f</code> thereby <em>abstracing out</em> the <code>&lt;???&gt;</code>. Note that <code>almostFact</code> is no longer a function that returns a factorial of a number - instead it is now a <a href="http://en.wikipedia.org/wiki/Higher-order_function">higher-order function</a> that receives a function with the signature <code>Int -&gt; Int</code> and returns a function that could or could not be the factorial function.</p>
+<h2 id="recovering-fact-from-almostfact">recovering fact from almostFact</h2>
+<p>In particular, if we are to feed <code>f</code> to <code>almostFact</code> with, say, <code>factA</code> that correctly calculates the factorial of <code>n</code>, we should be able to define <code>fact</code> in terms of <code>almostFact</code> like this:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">factB ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+factB <span class="fu">=</span> almostFact factA
+
+<span class="co">-- equivalently (by substitution)</span>
+factB n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>)
+                <span class="kw">then</span> <span class="dv">1</span>
+                <span class="kw">else</span> n <span class="fu">*</span> factA (n<span class="fu">-</span><span class="dv">1</span>)</code></pre>
+<p>So here we have a definition of the factorial function that is not explicitly recursive!… given that we can find such function <code>factA</code> that can correctly calculate a factorial of a number. Which is what we are trying to define. Boo.</p>
+<p>For the heck of things, let’s try replacing <code>factA</code> with our familiar <code>id</code> function. Yes, we know that this does not calculate the factorial of n, but let’s see what happens when we do this.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact0 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact0 <span class="fu">=</span> almostFact id
+
+<span class="co">-- let's see how we did</span>
+fact0 <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+fact0 <span class="dv">1</span> <span class="fu">=</span> <span class="dv">0</span></code></pre>
+<p>Our <code>fact0</code> is interesting since it is able to compute some factorials (namely, factorial of 0) but not all factorials. Let’s try to derive how it was able to compute factorial of 0 and 1.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">fact0 <span class="dv">0</span> <span class="fu">=</span> 
+    ((almostFact id) <span class="dv">0</span>)
+    <span class="fu">===&gt;</span>
+    (
+        (<span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>)
+            <span class="kw">then</span> <span class="dv">1</span>
+            <span class="kw">else</span> n <span class="fu">*</span> id (n<span class="fu">-</span><span class="dv">1</span>))
+    <span class="dv">0</span>) 
+    <span class="fu">===&gt;</span>
+    (<span class="kw">if</span> (<span class="dv">0</span> <span class="fu">==</span> <span class="dv">0</span>))
+        <span class="kw">then</span> <span class="dv">1</span>
+        <span class="kw">else</span> n <span class="fu">*</span> id (n<span class="fu">-</span><span class="dv">1</span>))
+    )
+    <span class="fu">===&gt;</span>
+    (<span class="kw">if</span> <span class="dt">True</span>)
+        <span class="kw">then</span> <span class="dv">1</span>
+        <span class="kw">else</span> n <span class="fu">*</span> id (n<span class="fu">-</span><span class="dv">1</span>))
+    )
+    <span class="fu">===&gt;</span>
+    <span class="dv">1</span>
+
+fact0 <span class="dv">1</span> <span class="fu">=</span>
+    <span class="fu">...</span>
+    <span class="fu">===&gt;</span>
+    (<span class="kw">if</span> (<span class="dv">1</span> <span class="fu">==</span> <span class="dv">0</span>))
+        <span class="kw">then</span> <span class="dv">1</span>
+        <span class="kw">else</span> n <span class="fu">*</span> id (n<span class="fu">-</span><span class="dv">1</span>))
+    )
+    <span class="fu">===&gt;</span>
+        (n <span class="fu">*</span> id (n<span class="fu">-</span><span class="dv">1</span>)) <span class="dv">1</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span> <span class="fu">*</span> id (<span class="dv">1</span><span class="fu">-</span><span class="dv">1</span>)
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span> <span class="fu">*</span> id <span class="dv">0</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span> <span class="fu">*</span> <span class="dv">0</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">0</span></code></pre>
+<p>Now, let’s try using our freshly defined <code>fact0</code> as a candidate for our mythical <code>factA</code>. How does it do?</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact1 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact1 <span class="fu">=</span> almostFact fact0
+
+<span class="co">-- let's see how we did</span>
+fact1 <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+fact1 <span class="dv">1</span> <span class="fu">=</span> <span class="dv">1</span>
+fact1 <span class="dv">2</span> <span class="fu">=</span> <span class="dv">0</span></code></pre>
+<p>Nice! We are one step closer to <code>factA</code>. Let’s take it slow and see how this calculations came about.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">fact1 <span class="dv">0</span> <span class="fu">=</span>
+    ((almostFact fact0) <span class="dv">0</span>)
+    <span class="fu">...</span>  <span class="co">--same as before</span>
+    <span class="fu">===&gt;</span> <span class="dv">1</span>
+
+fact1 <span class="dv">1</span> <span class="fu">=</span>
+    ((almostFact fact0) <span class="dv">1</span>)
+    <span class="fu">===&gt;</span>
+    (
+        (<span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>)
+            <span class="kw">then</span> <span class="dv">1</span>
+            <span class="kw">else</span> n <span class="fu">*</span> fact0 (n<span class="fu">-</span><span class="dv">1</span>))
+    <span class="dv">1</span>)
+    <span class="fu">===&gt;</span>
+        (<span class="kw">if</span> (<span class="dv">1</span> <span class="fu">==</span> <span class="dv">0</span>)
+            <span class="kw">then</span> <span class="dv">1</span>
+            <span class="kw">else</span> n <span class="fu">*</span> fact0 (n<span class="fu">-</span><span class="dv">1</span>))
+    <span class="fu">===&gt;</span>
+        (n <span class="fu">*</span> fact0 (n<span class="fu">-</span><span class="dv">1</span>)) <span class="dv">1</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span> <span class="fu">*</span> fact0 (<span class="dv">1</span><span class="fu">-</span><span class="dv">1</span>)
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span> <span class="fu">*</span> fact0 <span class="dv">0</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span> <span class="fu">*</span> <span class="dv">1</span> 
+    <span class="fu">===&gt;</span>
+        <span class="dv">1</span>
+
+fact1 <span class="dv">2</span> <span class="fu">=</span>
+    <span class="fu">...</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">2</span> <span class="fu">*</span> fact0 (<span class="dv">2</span><span class="fu">-</span><span class="dv">1</span>)
+    <span class="fu">===&gt;</span>
+        <span class="dv">2</span> <span class="fu">*</span> fact0 (<span class="dv">1</span>)
+    <span class="fu">===&gt;</span>
+        <span class="dv">2</span> <span class="fu">*</span> <span class="dv">0</span>
+    <span class="fu">===&gt;</span>
+        <span class="dv">0</span></code></pre>
+<p>Needless to say, we can define <code>fact2</code> as:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact2 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact2 <span class="fu">=</span> almostFact fact1
+
+<span class="co">-- let's see how we did</span>
+fact2 <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+fact2 <span class="dv">1</span> <span class="fu">=</span> <span class="dv">1</span>
+fact2 <span class="dv">2</span> <span class="fu">=</span> <span class="dv">2</span>
+fact2 <span class="dv">3</span> <span class="fu">=</span> <span class="dv">0</span></code></pre>
+<p>and <code>fact3</code>:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact3 ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact3 <span class="fu">=</span> almostFact fact2
+
+<span class="co">-- let's see how we did</span>
+fact3 <span class="dv">0</span> <span class="fu">=</span> <span class="dv">1</span>
+fact3 <span class="dv">1</span> <span class="fu">=</span> <span class="dv">1</span>
+fact3 <span class="dv">2</span> <span class="fu">=</span> <span class="dv">2</span>
+fact3 <span class="dv">3</span> <span class="fu">=</span> <span class="dv">6</span>
+fact3 <span class="dv">4</span> <span class="fu">=</span> <span class="dv">0</span></code></pre>
+<p>You see the pattern here - <em><code>almost-factorial</code> can take in a crappy factorial function and output a slightly better factorial function</em>. In our case, repeatedly applying <code>almostFact</code>, starting with <code>id</code>, resulted in an incrementally better candidate for the mythical <code>factA</code>. Since we are very clever, we can imagine that an infinite application of almostFact to <code>id</code> could precisely be the factorial function we are looking for.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">factInfinity <span class="fu">=</span> almostFact <span class="fu">.</span> almostFact <span class="fu">.</span> almostFact [<span class="fu">...</span>] <span class="fu">.</span> almostFact <span class="fu">$</span> id</code></pre>
+<h2 id="fixpoint-of-functions">fixpoint of functions</h2>
+<p>At this point of our quest, we need to bring in the notion of a <a href="http://en.wikipedia.org/wiki/Fixed_point_(mathematics)">fixpoint of a function</a>. Simply put, a fixed point <code>x</code> of a function <code>f</code> is a value such that <code>f(x) = x</code>.</p>
+<p>In particular, an <a href="http://en.wikipedia.org/wiki/Fixed_point_(mathematics)#Attractive_fixed_points">attrative fixed point</a> can be found by simply applying <code>f</code> to <code>x</code> that is close enough to the fixed of of <code>f</code>. That is:</p>
+<pre><code>fixed point of x = f(f(f(...f(x)))...)</code></pre>
+<p>We have seen this form before - this is exactly how we defined <code>factInfinity</code> (please scroll up just a little bit and muse at the similiarity). So <code>factInfinity</code> is a fixed point for <code>almostFact</code>! In other words, since we know that <code>factInfinity</code> is the factorial function we are looking for, our search for a non-recursive factorial function is actually equivalent to the search for the fixed-point for the function <code>almostFact</code>!</p>
+<h2 id="what-is-y-combinator">what is y-combinator?</h2>
+<p>Wouldn’t it be nice to have a function that returns a fixed point for a given function? Let’s imagine such function, say <code>Y</code>, exists somewhere in the universe. Great, we can now define <code>fact</code> as follows:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">fact ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+fact <span class="fu">=</span> <span class="dt">Y</span> almostFact</code></pre>
+<p>This definition holds since we have learned that fixed point for <code>almostFact</code> is the factorial function we are looking for.</p>
+<p>Now, is it possible that such function <code>Y</code> exists? In fact, it does exist, and it is called the <strong>Y-Combinator</strong> (also known as the fixed point combinator).</p>
+<p><em>-end of message -</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>

@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>understanding y-combinator, part 2</h1>
+
+            <div class="info">
+    Posted on June 21, 2014
+    
+        by devty
+    
+</div>
+
+<p>This is part two of my exploration with the y-combinator. In the <a href="http://blog.2t.io/posts/0002-y_combinator.html">first part</a> of our journey, we focused on understanding <em>what</em> y-combinator is. This part will initiate how we can derive y-combinator.</p>
+<h2 id="combinator">combinator</h2>
+<p>Before we proceed further, a question - why does this <em>combinator</em> tag follow along the <code>Y</code> function we are trying to derive?</p>
+<p>A combinator actually has a strict definition in mathematical logic - a combinator is “higher order function that uses only function application and earlier defined combinators to define a result from its argument”<a href="http://en.wikipedia.org/wiki/Combinatory_logic">[1]</a>. In other words, combinator is a lambda expression with no free variables (a variable of a labmda expression that is NOT “defined” within the definition of the lambda expression). I bet we can understand what combinators are by looking at few non-/examples.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="dv">1</span><span class="fu">.</span> (\x <span class="ot">-&gt;</span> x)
+<span class="co">-- this is a combinator. it only has one bound variable, x</span>
+<span class="dv">2</span><span class="fu">.</span> (\x <span class="ot">-&gt;</span> y)
+<span class="co">-- this is NOT a combinator becuase y is a free variable.</span>
+<span class="dv">3</span><span class="fu">.</span> ((\x <span class="ot">-&gt;</span> (\y <span class="ot">-&gt;</span> x)))
+<span class="co">-- this is a combinator. </span>
+<span class="co">-- Note that the variable x is bound by the outer anonymous function</span>
+<span class="dv">4</span><span class="fu">.</span> (\x <span class="ot">-&gt;</span> (\y <span class="ot">-&gt;</span> x y))
+<span class="co">-- this is a combinator. </span>
+<span class="co">-- Note that the variable x is bound by the outer anonymous function</span>
+<span class="co">-- and variable y is bound by the inner anonymous function</span>
+<span class="dv">5</span><span class="fu">.</span> (x (\y <span class="ot">-&gt;</span> y))
+<span class="co">-- this is NOT a combinator. </span>
+<span class="co">-- In fact, it's not even a function! Note that x is free.</span>
+<span class="dv">6</span><span class="fu">.</span> (\x <span class="ot">-&gt;</span> x) y
+<span class="co">-- this is NOT a combinator. </span>
+<span class="co">-- In fact, it's not even a function! Note that y is free</span></code></pre>
+<p>Not too bad!</p>
+<h2 id="defining-the-y-combinator-lazy">defining the y-combinator (lazy)</h2>
+<p>Let’s further study our <code>Y</code> function.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- by our definition we know that </span>
+<span class="dt">Y</span> f <span class="fu">=</span> fixpointF
+
+<span class="co">-- and</span>
+f fixpointF <span class="fu">=</span> fixpointF
+
+<span class="co">-- so this should also hold</span>
+<span class="dt">Y</span> f <span class="fu">=</span> fixpointF <span class="fu">=</span> f fixpointF
+
+<span class="co">-- which means</span>
+<span class="dt">Y</span> f <span class="fu">=</span> f (<span class="dt">Y</span> f)</code></pre>
+<p>Voila! We have defined our <code>Y</code> function! This is actually pretty amazing result and precisely what we are looking for. Let’s test our result in haskell.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">almostFact ::</span> (<span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>) <span class="ot">-&gt;</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> <span class="dt">Int</span>
+almostFact f n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>) 
+                        <span class="kw">then</span> <span class="dv">1</span>
+                        <span class="kw">else</span> n <span class="fu">*</span> f (n<span class="fu">-</span><span class="dv">1</span>)
+<span class="co">-- our 'Y' function</span>
+y f <span class="fu">=</span> f (y f)
+
+<span class="co">-- factorial function is a fixed point for almostFact</span>
+fact <span class="fu">=</span> y almostFact
+
+<span class="co">-- let's test!</span>
+fact <span class="dv">10</span> <span class="fu">=</span> <span class="dv">3628800</span></code></pre>
+<p>I personally find this pretty crazy. We simply solved for the definition of <code>Y</code> analytically, and our haskell program somehow figured out <em>how</em> to <strong>compute</strong> our analytic solution. From my point of view, nothing in the definition of our <code>Y</code> function tells our <em>how</em> we can compute the fix point of the given function - it only defines <em>what</em> behavior we expect from our <code>Y</code> function. And yet, this definition works for haskell.</p>
+<p>The more I think about, the more I think this is super crazy. I had always thought of programming as a task of writing out a computation recipe comprising only primitive operations that is to be understood by our incredibly efficient but not very bright computers. In contrast to that belief, haskell seems somehow..smarter! This brilliance, of course, is all haskell, and the key point here is, like many things in haskell, <em>lazy evaluation</em>. For now, let’s leave it at that.</p>
+<h2 id="y-combinator">y-combinator</h2>
+<p>Our newest solution is not satisfactory on several levels. For one, it does not work on strict languages (the ones that evaluate arguments) since it will never be able to resolve application of any function to our <code>Y</code> function:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">y f 
+<span class="ot">=&gt;</span> (f (y f))
+<span class="ot">=&gt;</span> (f (f (y f)))
+<span class="ot">=&gt;</span> (f (f (f (y f)))
+<span class="fu">...</span></code></pre>
+<p>Another point to note is that this definition of our <code>Y</code> function is NOT a combinator since the variable <code>y</code> in its definition is a free variable - hence we haven’t defined y-combinator just yet.</p>
+<p>Finally, recall our original puzzle - to define factorial function without explicit recursion. We have almost solved that problem with our last factorial definition; only problem now is that our <code>Y</code> function is itself explicitly recursive.</p>
+<p>Nevertheless we have made some awesome progress - once we solve our newest problem, not only we will be able to define factorial function as non-explicitly recursive function, but any functions of its ilk. Like fibonacci for instance.</p>
+<h2 id="an-abrupt-end">an abrupt end</h2>
+<p>I am extremely discouraged to note that this is where the journey will end (for now) with haskell as our guide. The problem is that in our next step, which is kinda of a step backward, we meet the following code:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">fact n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>)
+            <span class="kw">then</span> <span class="dv">1</span>
+            <span class="kw">else</span> n <span class="fu">*</span> fact (n<span class="fu">-</span><span class="dv">1</span>)
+
+partFact self n <span class="fu">=</span> <span class="kw">if</span> (n <span class="fu">==</span> <span class="dv">0</span>)
+                 <span class="kw">then</span> <span class="dv">1</span>
+                 <span class="kw">else</span> n <span class="fu">*</span> (self self (n<span class="fu">-</span><span class="dv">1</span>))
+
+<span class="co">-- let's test!</span>
+partFact partFact <span class="dv">5</span> <span class="fu">=</span> <span class="dv">120</span></code></pre>
+<p>This seems very reasonable piece of code, but it does not work in the type system of haskell. Haskell refuses the typecheck with the error <code>check: cannot construct the infinite type</code> <a href="http://stackoverflow.com/questions/4273413/y-combinator-in-haskell">1</a>.</p>
+<p>So if you are so inclined to finish our derivation of the y-combinator, I suggest you go read the <a href="http://mvanier.livejournal.com/2897.html">original article</a>, starting from the section “Deriving the y-combinator”.</p>
+<p><em>-end of message-</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>

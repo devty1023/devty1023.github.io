@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>lazy evaluation and its artifacts</h1>
+
+            <div class="info">
+    Posted on June 18, 2014
+    
+        by devty
+    
+</div>
+
+<p>In my few years of programming, I’ve become accustomed to thinking about programs sequentially. Solving problems using this approach was not unlike crafting a game of snakes and ladders - my program, moving forward, backwards, ups, and downs, cheerfully chugging towards termination.</p>
+<p>But this <a href="http://en.wikipedia.org/wiki/Lazy_evaluation">lazy evaluation</a> is challenging the way I think about programs. It’s changing the rules I have imposed to free myself to do things I didn’t think was possible (e.g. working with infinite lists). It’s constantly making me question whether I truly understand what computation I am asking haskell compiler to program for me.</p>
+<p>What’s I really like about this new approach to programming is that I’ve begun to think of my program as rules of computation instead of a set of machine instructions. When I’m going through Haskell tutorials and writing haskell programs, I find myself not caring too much about how my program will behave as an entity in computer memory but thinking about how I can best encode the computation I am trying to achieve. I am not really spending any time to think about what my program should do in the face of NULL pointer. Rather, I feel more like a designer of a fabric that is a program and seeking to out-wit myself and others in a friendly competition of clever-ness. And being proud of my program I had written. It is immensely fun.</p>
+<p>This is an ode to lazy evaluation - a spotlight on <del>two</del> one artifact<del>s</del> of lazy evaluation that I found incredibly graceful as a beginner functional programmer.</p>
+<h2 id="folds">folds</h2>
+<p>Fold-ish functions are incredibly powerful abstraction - I can use fold-ish functions to implement a lot of elementary functions that I had previously thought as “atomic”. The system created by holding fold as our axiom is astoundingly plentiful and complete than I had originally imagined.</p>
+<p>Defining fold is straightforward. Here is <a href="http://stackoverflow.com/questions/7396978/left-and-right-folding-over-an-infinite-list">typical definition</a> of <code>foldr</code> and <code>foldl</code>:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- if the list is empty, the result is the initial value z; else</span>
+<span class="co">-- apply f to the first element and the result of folding the rest</span>
+foldr<span class="ot"> ::</span> (a <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> [a] <span class="ot">-&gt;</span> b
+foldr f z []     <span class="fu">=</span> z
+foldr f z (x<span class="fu">:</span>xs) <span class="fu">=</span> f x (foldr f z xs)
+
+<span class="co">-- if the list is empty, the result is the initial value; else</span>
+<span class="co">-- we recurse immediately, making the new initial value the result</span>
+<span class="co">-- of combining the old initial value with the first element.</span>
+foldl<span class="ot"> ::</span> (b <span class="ot">-&gt;</span> a <span class="ot">-&gt;</span> b) <span class="ot">-&gt;</span> b <span class="ot">-&gt;</span> [a] <span class="ot">-&gt;</span> b
+foldl f z []     <span class="fu">=</span> z
+foldl f z (x<span class="fu">:</span>xs) <span class="fu">=</span> foldl f (f z x) xs</code></pre>
+<p>In many situations it makes sense to ignore the difference between <code>foldl</code> and <code>foldr</code> - a behavior defined in one should be translatable to the other form - but a careful examination of each definition under the light of lazy evaluation reveals interesting differences.</p>
+<p>As an exercise, let’s consider the following:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">idR ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
+idR <span class="fu">=</span> foldr (<span class="fu">:</span>) []
+
+<span class="ot">idL ::</span> [<span class="dt">Int</span>] <span class="ot">-&gt;</span> [<span class="dt">Int</span>]
+idL <span class="fu">=</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) []
+
+<span class="fu">&gt;&gt;</span> idR [<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>] 
+[<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]
+<span class="fu">&gt;&gt;</span> idL [<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]
+[<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]</code></pre>
+<p>Like I mentioned before - same behavior can be encoded with both <code>foldr</code> and <code>foldl</code>, although one might be computationally more efficient than the other. Right?</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="fu">&gt;&gt;</span> take <span class="dv">3</span> <span class="fu">$</span> idR [<span class="dv">1</span><span class="fu">..</span>]
+[<span class="dv">1</span>,<span class="dv">2</span>,<span class="dv">3</span>]
+<span class="fu">&gt;&gt;</span> take <span class="dv">3</span> <span class="fu">$</span> idL [<span class="dv">1</span><span class="fu">..</span>]
+<span class="fu">...</span> (does not return<span class="fu">!</span>)</code></pre>
+<p>No! This difference in behavior stems from, of course, lazy evaluation. If you look at the definition of <code>foldr</code> and <code>foldl</code> more closely, you will observe that the former will immediately return an application of <code>f</code> and will take advantage of the laziness by not evaluating the recursive call to itself unless needed whereas the latter must evaluate the recursive call to itself again and again until the last application of <code>f</code> is achieved. To illustrate the application of this idea to our aforementioned example:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">--Note the definition of take</span>
+take<span class="ot"> ::</span> <span class="dt">Int</span> <span class="ot">-&gt;</span> [a] <span class="ot">-&gt;</span> [a]
+take n _      <span class="fu">|</span> n <span class="fu">&lt;=</span> <span class="dv">0</span> <span class="fu">=</span>  []
+take _ []              <span class="fu">=</span>  []
+take n (x<span class="fu">:</span>xs)          <span class="fu">=</span>  x <span class="fu">:</span> take (n<span class="fu">-</span><span class="dv">1</span>) xs
+
+take <span class="dv">3</span> <span class="fu">$</span> idL [<span class="dv">1</span><span class="fu">..</span>]
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) [] [<span class="dv">1</span><span class="fu">..</span>]
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) [] <span class="dv">1</span><span class="fu">:</span>[<span class="dv">2</span><span class="fu">..</span>] <span class="co">-- pattern match for case foldl f z (x:xs)</span>
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) ([] <span class="fu">++</span> [<span class="dv">1</span>]) [<span class="dv">2</span><span class="fu">..</span>] 
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) ([] <span class="fu">++</span> [<span class="dv">1</span>]) <span class="dv">2</span><span class="fu">:</span>[<span class="dv">3</span><span class="fu">..</span>] 
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) ([] <span class="fu">++</span> [<span class="dv">1</span>] <span class="fu">++</span> [<span class="dv">2</span>]) [<span class="dv">3</span><span class="fu">..</span>] 
+<span class="ot">=&gt;</span>  <span class="fu">...</span>
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldl (\acc x <span class="ot">-&gt;</span> acc <span class="fu">++</span> [x]) ([] <span class="fu">++</span> [<span class="dv">1</span>] <span class="fu">++</span> [<span class="dv">2</span>] <span class="fu">++</span> [<span class="dv">3</span>]) [<span class="dv">4</span><span class="fu">..</span>] 
+<span class="fu">...</span> forever
+
+take <span class="dv">3</span> <span class="fu">$</span> idR [<span class="dv">1</span><span class="fu">..</span>]
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldr (<span class="fu">:</span>) [] [<span class="dv">1</span><span class="fu">..</span>]  
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> foldr (<span class="fu">:</span>) [] <span class="dv">1</span><span class="fu">:</span>[<span class="dv">2</span><span class="fu">..</span>]   <span class="co">-- pattern match for case foldr f z (x:xs)</span>
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> (<span class="fu">:</span>) <span class="dv">1</span> (foldr f [] [<span class="dv">2</span><span class="fu">..</span>])
+<span class="ot">=&gt;</span>  take <span class="dv">3</span> <span class="fu">$</span> <span class="dv">1</span><span class="fu">:</span>(foldr f [] [<span class="dv">2</span><span class="fu">..</span>])
+<span class="ot">=&gt;</span>  <span class="dv">1</span><span class="fu">:</span>(take <span class="dv">2</span> <span class="fu">$</span> foldr f [] [<span class="dv">2</span><span class="fu">..</span>])
+<span class="ot">=&gt;</span>  <span class="fu">...</span>
+<span class="ot">=&gt;</span>  <span class="dv">1</span><span class="fu">:</span><span class="dv">2</span><span class="fu">:</span>(take <span class="dv">1</span> <span class="fu">$</span> foldr f [] [<span class="dv">3</span><span class="fu">..</span>])
+<span class="ot">=&gt;</span>  <span class="fu">...</span>
+<span class="ot">=&gt;</span>  <span class="dv">1</span><span class="fu">:</span><span class="dv">2</span><span class="fu">:</span><span class="dv">3</span><span class="fu">:</span>(take <span class="dv">0</span> <span class="fu">$</span> foldr f [] [<span class="dv">4</span><span class="fu">..</span>])
+<span class="ot">=&gt;</span>  <span class="dv">1</span><span class="fu">:</span><span class="dv">2</span><span class="fu">:</span><span class="dv">3</span><span class="fu">:</span>[]</code></pre>
+<p>This is what is meant by <code>foldr</code> being able to operate on infinite list, whereas <code>foldl</code> cannot.</p>
+<p>Of course there is <a href title="http://www.haskell.org/haskellwiki/Foldr_Foldl_Foldl'">one serious downfall of lazy evaluation strategy on <code>foldr</code> and <code>foldl</code></a> I am aware of, but this is an ode and I refuse to discuss it.</p>
+<h2 id="further-readings">further readings</h2>
+<p><a href="http://www.haskell.org/haskellwiki/Fold">1</a> <a href title="http://www.haskell.org/haskellwiki/Foldr_Foldl_Foldl'">2</a> <a href="http://stackoverflow.com/questions/7396978/left-and-right-folding-over-an-infinite-list">3</a></p>
+<p><em>-end of message-</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>

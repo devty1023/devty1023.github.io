@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>stack and lazy</h1>
+
+            <div class="info">
+    Posted on July 14, 2014
+    
+        by devty
+    
+</div>
+
+<p>I’ve read somewhere in a blog post where the claim was made that “laziness and tail recursion is orthogonal.” I do not agree with the statement for the following reasons.</p>
+<h2 id="the-tail-recursive-foldl">the tail recursive foldl</h2>
+<p>If the two concepts are indeed orthogonal, why would haskellians see no great benefit of using <code>foldl</code> which is the tail recursive one in the fold siblings? In fact, <code>foldl</code> is pretty weak - it can’t handle infinite lists nor is it really free from stack overflows.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- can't handle infinite lists</span>
+idL <span class="fu">=</span> foldl (\acc x <span class="ot">-&gt;</span> axx <span class="fu">++</span> [x]) []
+idL [<span class="dv">1</span><span class="fu">..</span>]
+
+<span class="co">-- not free from stack overflow</span>
+mysum <span class="fu">=</span> foldl (<span class="fu">+</span>) <span class="dv">0</span>
+mysum [<span class="dv">1</span><span class="fu">..</span><span class="dv">10000</span>]</code></pre>
+<p>I’ve looked at the function <code>idL</code> before, so let’s investigate why <code>mysum</code> would cause a stack overflow. Recall that</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">foldl f z [] <span class="fu">=</span> z
+foldl f z (x<span class="fu">:</span>xs) <span class="fu">=</span> foldl f (f z x) xs</code></pre>
+<p>Then,</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">mysum [<span class="dv">1</span><span class="fu">..</span><span class="dv">10000</span>]
+<span class="ot">=&gt;</span> foldl (<span class="fu">+</span>) <span class="dv">0</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">10000</span>]
+<span class="ot">=&gt;</span> foldl (<span class="fu">+</span>) <span class="dv">0</span> <span class="dv">1</span><span class="fu">:</span>[<span class="dv">2</span><span class="fu">..</span><span class="dv">10000</span>]
+<span class="ot">=&gt;</span> foldl (<span class="fu">+</span>) (<span class="dv">0</span><span class="fu">+</span><span class="dv">1</span>) [<span class="dv">2</span><span class="fu">..</span><span class="dv">10000</span>]
+<span class="fu">...</span>
+<span class="ot">=&gt;</span> foldl (<span class="fu">+</span>) (<span class="dv">0</span><span class="fu">+</span><span class="dv">1</span><span class="fu">+</span><span class="dv">2</span>) [<span class="dv">3</span><span class="fu">..</span><span class="dv">10000</span>]
+<span class="fu">...</span>
+<span class="ot">=&gt;</span> foldl (<span class="fu">+</span>) (<span class="dv">0</span><span class="fu">+</span><span class="dv">1</span><span class="fu">+</span><span class="dv">2</span><span class="fu">+</span><span class="dv">3</span><span class="fu">+</span><span class="dv">4</span>) [<span class="dv">5</span><span class="fu">..</span><span class="dv">10000</span>]
+<span class="fu">...</span>
+<span class="ot">=&gt;</span> foldl (<span class="fu">+</span>) (<span class="dv">0</span><span class="fu">+</span><span class="dv">1</span><span class="fu">+</span><span class="dv">2</span><span class="fu">+..+</span><span class="dv">10000</span>) []</code></pre>
+<p><code>foldl</code> fails us precisely because haskell is lazy - we are simply building up a chain of thunks instead of evaluating the sum incrementally. Sooner or later, we are going to run out of memory to store this super large thunk. A way out of this problem is to use <code>foldl'</code> which evaluates its argument before proceeding.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">foldl<span class="ot">` f z [] = z</span>
+<span class="ot">foldl`</span> f z (x<span class="fu">:</span>xs) <span class="fu">=</span> <span class="kw">let</span> z' <span class="fu">=</span> z <span class="ot">`f`</span> x
+                    <span class="kw">in</span> seq z' <span class="fu">$</span> foldl' f z' xs</code></pre>
+<p>In fact, it is actually possible for <code>foldr</code> to avoid stack overflow, as seen in the Prelude’s implementation of <code>concat</code></p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">concat xss <span class="fu">=</span> foldr (<span class="fu">++</span>) [] xss
+main <span class="fu">=</span> print (length (concat [[x] <span class="fu">|</span> x <span class="ot">&lt;-</span> [<span class="dv">1</span><span class="fu">..</span><span class="dv">1000000</span>]]))</code></pre>
+<p>How would <code>foldr</code>, which is <em>not</em> tail recursive, work for such large list? At the center is, of course, laziness.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">concat [[<span class="dv">1</span>]<span class="fu">.</span>[<span class="dv">2</span>],[<span class="dv">3</span>],<span class="fu">...</span>]
+<span class="ot">=&gt;</span> foldr (<span class="fu">++</span>) [] [[<span class="dv">1</span>]<span class="fu">.</span>[<span class="dv">2</span>],[<span class="dv">3</span>],<span class="fu">...</span>]
+<span class="ot">=&gt;</span> foldr (<span class="fu">++</span>) [] [<span class="dv">1</span>]<span class="fu">:</span>[[<span class="dv">2</span>],[<span class="dv">3</span>],<span class="fu">...</span>]
+<span class="ot">=&gt;</span> (<span class="fu">++</span>) [<span class="dv">1</span>] (foldr (<span class="fu">++</span>) [] [[<span class="dv">2</span>],[<span class="dv">3</span>]<span class="fu">..</span>])
+<span class="ot">=&gt;</span> (<span class="fu">++</span>) <span class="dv">1</span><span class="fu">:</span>[] (foldr (<span class="fu">++</span>) [] [[<span class="dv">2</span>],[<span class="dv">3</span>]<span class="fu">..</span>])
+<span class="ot">=&gt;</span> (<span class="dv">1</span><span class="fu">:</span>[]) <span class="fu">++</span> (foldr (<span class="fu">++</span>) [] [[<span class="dv">2</span>],[<span class="dv">3</span>],<span class="fu">..</span>])
+<span class="ot">=&gt;</span> <span class="dv">1</span><span class="fu">:</span>([] <span class="fu">++</span> foldr (<span class="fu">++</span>) [] [[<span class="dv">2</span>],[<span class="dv">3</span>]<span class="fu">..</span>])</code></pre>
+<p>Our computation actually <em>ends</em> here, and what is to the right of <code>1:</code> is stored as a thunk, waiting to be evaluated if the need comes. As a consequence, our <code>concat</code> would run in a constant amount of stack (if we garbage collect the values, as in <code>length</code>) and also has the flexibility of working with infinite lists.</p>
+<p>To include a one-line summary from one of our references, “A function strict in its second argument will always require linear stack space with <code>foldr</code>, so <code>foldl</code> should be used instead in that case. If the function is lazy/non-strict in its second argument we should use <code>foldr</code> to support infinite lists and to allow a streaming use of the input list where only par of it needs to be in memory at a time.”</p>
+<p>For instance, in <code>mysum</code> we used <code>+</code> in which the second argument is strict - we need its value in order to calculate the whole result - whereas <code>++</code> is not strict in the second argument - we can still know the first value of the <code>concat</code> without evaluating the rest of the second argument.</p>
+<h2 id="guarded-recursion">guarded recursion</h2>
+<p>In fact, tail recursion may not be an important topic in a lazy environment. To borrow Brent Yorgey’s words:</p>
+<blockquote>
+<p>With that said, tail recursion is not that useful of a concept in a lazy language like Haskell. The important concept to know in Haskell is ‘guarded recursion’, where any recursive calls occur within a data constructor (such as foldr, where the recursive call to foldr occurs as an argument to (:)). This allows the result of the function to be consumed lazily, since it can be evaluated up to the data constructor and the recursive call delayed until needed.</p>
+</blockquote>
+<p>Also mentioned in Haskell wiki:</p>
+<blockquote>
+<p>In Haskell, the function call model is a little different, function calls might not use a new stack frame, so making a function tail-recursive typically isn’t as big a deal—being productive, via guarded recursion, is more usually a concern.</p>
+</blockquote>
+<p>There isn’t a lot of information on guarded recursion I can find at the moment - but I will try to look through <a href="http://en.wikipedia.org/wiki/Tail_recursion#Tail_recursion_modulo_cons">tail recursion modulo cons</a> which seems to be a related topic in the future blog posts.</p>
+<h2 id="references">references</h2>
+<p><a href="http://www.haskell.org/haskellwiki/Foldr_Foldl_Foldl%27">[1]</a><a href="http://www.haskell.org/haskellwiki/Stack_overflow">[2]</a><a href="http://www.haskell.org/pipermail/haskell-cafe/2009-March/058607.html">[3]</a></p>
+<p><em>end of message</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>

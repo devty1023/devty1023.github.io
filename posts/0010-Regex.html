@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>a play on regular expression, pt1</h1>
+
+            <div class="info">
+    Posted on July 30, 2014
+    
+        by devty
+    
+</div>
+
+<p>One thing led to another, and I’ve ended up studying regexs in Haskell. Perhaps <a href="https://docs.python.org/2/library/re.html">Python has it too easy</a>, but using regexes in Haskell is NOT easy - <a href="http://www.haskell.org/haskellwiki/Regular_expressions">as much as it tries to be</a>.</p>
+<p>Here is the state of Haskell’s regex, as I interpret it. At the highest level, Haskell’s <code>Text.Regex</code> defines the interfaces for handling regular expressions in Haksell. The implementation of these interfaces are numerous - there are several options in choosing the backend for the regexes, each with its benefits and uses. Most accessible implementation seems to be the regex-posix implementation in <code>Text.Regex.POSIX</code> – I didn’t have to install anything to try this guy out - but it may not be the one you are looking for if you are looking for something to please your perl’s or ruby’s regex senses. POSIX regexes, it turns out, are <a href="http://en.wikipedia.org/wiki/Regular_expression#Standards">NOT the same as perl’s</a>.</p>
+<p>Why is it comparatively more difficult to get started on regexes in Haskell (on a second thought, is everything relatively more difficult to get started in Haskell since it doesn’t spoon feed me like Python?). I initially assumed that it is because Haskell is a functional language - anything practical is very difficult to achieve in a functional language.</p>
+<p>In reality, implementation of regular expression is a great problem to solve for functional programming language like Haskell, as the <a href="http://www.haskell.org/haskellwiki/Research_papers/Functional_pearls">functional pearl</a> covering <a href="http://sebfisch.github.io/haskell-regexp/regexp-play.pdf">regular expressions</a> illuminates.</p>
+<p>So here is an attempt for an annotated summary of the aforementioned paper - for the benefit of my understanding and some other lost newb haskellians. (but please do read the original paper - it is an awesome read.).</p>
+<h2 id="first-try">first try</h2>
+<p>Let’s concern ourselves with the most basic functionalities of regular expression. Nothing fancy like lookaheads - just plain old regular expressions like <code>((a|b)*c(a|b)*c)*(a|b)*</code>. (what does this regular expression match?). Furthermore, let’s constrain our scope to regular expression matching - defining a <code>accept</code> function of the following signature.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">accept ::</span> <span class="dt">Regex</span> <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span></code></pre>
+<p><code>accept</code> would simply tell us whetehr a given string is accepted by the supplied regular expression.</p>
+<p>It is the way of hasekll to start with a data type. Our regular expression will support the following functionalities:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Regex</span> <span class="fu">=</span> <span class="dt">Eps</span>              <span class="co">-- epilson (nothing)</span>
+           <span class="fu">|</span> <span class="dt">Sym</span> <span class="dt">Char</span>         <span class="co">-- a, where a is an element from our language)</span>
+           <span class="fu">|</span> <span class="dt">Alt</span> <span class="dt">Regex</span> <span class="dt">Regex</span>  <span class="co">-- x|y, where x,y is a regular expression</span>
+           <span class="fu">|</span> <span class="dt">Seq</span> <span class="dt">Regex</span> <span class="dt">Regex</span>  <span class="co">-- xy</span>
+           <span class="fu">|</span> <span class="dt">Rep</span> <span class="dt">Regex</span>        <span class="co">-- x*</span>
+           <span class="kw">deriving</span> (<span class="dt">Show</span>)</code></pre>
+<p>Using this data type, we can represent a regular expression like <code>((a|b)*c(a|b)*c)*(a|b)*</code></p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">ghci<span class="fu">&gt;</span> <span class="kw">let</span> nocs <span class="fu">=</span> <span class="dt">Rep</span> (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'a'</span>) (<span class="dt">Sym</span> <span class="ch">'b'</span>))
+ghci<span class="fu">&gt;</span> <span class="kw">let</span> onec <span class="fu">=</span> <span class="dt">Seq</span> nocs (<span class="dt">Sym</span> <span class="ch">'c'</span>)
+ghci<span class="fu">&gt;</span> <span class="kw">let</span> evencs <span class="fu">=</span> <span class="dt">Seq</span> (<span class="dt">Rep</span> (<span class="dt">Seq</span> onec onec)) nocs</code></pre>
+<p>With this data type, writing up our <code>accept</code> function is very easy for the most part.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">accept ::</span> <span class="dt">Regex</span> <span class="ot">-&gt;</span> <span class="dt">String</span> <span class="ot">-&gt;</span> <span class="dt">Bool</span>
+accept <span class="dt">Eps</span>       u <span class="fu">=</span> null u    <span class="co">-- accept if u is an empty string</span>
+accept (<span class="dt">Sym</span> c)   u <span class="fu">=</span> u <span class="fu">==</span> [c]  <span class="co">-- accept if the char matches u</span>
+accept (<span class="dt">Alt</span> p q) u <span class="fu">=</span> accept p u <span class="fu">||</span> 
+                     accept q u <span class="co">-- accept if either p or q is accepted</span>
+accept (<span class="dt">Seq</span> p q) u <span class="fu">=</span> <span class="fu">???</span>
+accept (<span class="dt">Rep</span> p)   u <span class="fu">=</span> <span class="fu">???</span></code></pre>
+<p>Defining our <code>accept</code> for sequences and repetition is little bit more involved (just a tiny bit more) - let’s tackle each one at a time.</p>
+<p>A gut go for defining sequence might look something like this</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">accept (<span class="dt">Seq</span> p q) u <span class="fu">=</span> accept p u <span class="fu">&amp;&amp;</span> accept q u <span class="co">-- WRONG!</span></code></pre>
+<p>For example, suppose we have the regular expression <code>(a|b)c</code> and a string <code>&quot;ac&quot;</code>. Letting <code>p = (a|b)</code> and <code>q = c</code> and using our gut definition, we have</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">accept (<span class="dt">Seq</span> (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'a'</span>) (<span class="dt">Sym</span> <span class="ch">'b'</span>)) <span class="dt">Sym</span> <span class="ch">'c'</span>) <span class="st">&quot;ac&quot;</span> 
+<span class="fu">===&gt;</span>
+accept (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'a'</span>) (<span class="dt">Sym</span> <span class="ch">'b'</span>)) <span class="st">&quot;ac&quot;</span> <span class="fu">&amp;&amp;</span> accept (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'c'</span>)) <span class="st">&quot;ac&quot;</span>
+<span class="fu">===&gt;</span>
+(accept (<span class="dt">Sym</span> <span class="ch">'a'</span>) <span class="st">&quot;ac&quot;</span> <span class="fu">||</span> accept (<span class="dt">Sym</span> <span class="ch">'b'</span>) <span class="st">&quot;ac&quot;</span>) 
+    <span class="fu">&amp;&amp;</span> accept (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'c'</span>)) <span class="st">&quot;ac&quot;</span>
+<span class="fu">===&gt;</span>
+(<span class="st">&quot;ac&quot;</span> <span class="fu">==</span> [a]) <span class="fu">||</span> (<span class="st">&quot;ac&quot;</span> <span class="fu">==</span> [b]) <span class="fu">&amp;&amp;</span> accept (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'c'</span>)) <span class="st">&quot;ac&quot;</span>
+<span class="fu">===&gt;</span>
+<span class="dt">False</span> <span class="fu">&amp;&amp;</span> accept (<span class="dt">Alt</span> (<span class="dt">Sym</span> <span class="ch">'c'</span>)) <span class="st">&quot;ac&quot;</span> 
+<span class="fu">===&gt;</span>
+<span class="dt">False</span></code></pre>
+<p>Problem here is that we didn’t want to match the entire <code>&quot;ac&quot;</code> with <code>(a|b)</code> and <code>c</code> but only a portion of <code>&quot;ac&quot;</code> with <code>(a|b)</code> (namely <code>&quot;a&quot;</code>) and the rest with <code>c</code> (namely <code>&quot;c&quot;</code>). In general, <code>u</code> shouldn’t be matched with both <code>p</code> and <code>q</code> - instead, a portion of <code>u</code> should be matched with <code>p</code> and the rest of <code>u</code> matched with <code>q</code>.</p>
+<p>Our strategy is this - try splitting a given string into two factors and supply each to <code>p</code> and <code>q</code> - if any of our decomposition matches, know can accept the sequence.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">split ::</span> [a] <span class="ot">-&gt;</span> [([a],[a])]
+split []      <span class="fu">=</span> [([],[])]
+split (c<span class="fu">:</span>cs)  <span class="fu">=</span> ([],c<span class="fu">:</span>cs)<span class="fu">:</span>[(c<span class="fu">:</span>s1,s2) <span class="fu">|</span> (s1, s2) <span class="ot">&lt;-</span> split cs]
+
+accept (<span class="dt">Seq</span> p q) u <span class="fu">=</span> or [accept p u1 <span class="fu">||</span> accept q u2 <span class="fu">|</span> (u1,u2) <span class="ot">&lt;-</span> split u]</code></pre>
+<p><em>abrupt end of message</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>

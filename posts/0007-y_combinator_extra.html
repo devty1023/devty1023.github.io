@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>understanding y-combinators, extra session</h1>
+
+            <div class="info">
+    Posted on July  3, 2014
+    
+        by devty
+    
+</div>
+
+<p>On my <a href="http://blog.2t.io/posts/0002-y_combinator_pt1.html">previous explorations on y-combinator</a>, I had considered y-combinator as a function that spews out fixpoint value of for a given function. We tried (but stopped short) of deriving a y-combinator with a clear goal in sight - to come up with a non-explicit recursive definition for a factorial function.</p>
+<p>It’s not difficult to think wonder about the limit of y-combinators. What is the <em>domain</em> of this amazing little guy - does y-combinator work for any type of function or some subset of function with a particular quality?</p>
+<p>I had ignored the thought at the time, but the question came up again while I was reading a <a href="http://haskell.cs.yale.edu/?post_type=publication&amp;p=111">paper on the history of of functional programming</a>. It seems necessary to answer the question to further my understanding of y-combinator.</p>
+<h2 id="lambda-calculus">lambda calculus</h2>
+<p>y-combinator is a artifact of lambda calculus, a branch of mathematics functional programming owes a lot to. I take lambda calculus as a yet another system to describe how the universe operates, and it produces some awesome results that is quite fun to think about.</p>
+<p>One of the result of lambda calculus is the <em>fixpoint theroem</em>:</p>
+<pre><code>Every lambda expression e has a fixpoint e' such taht (e e') &lt;=&gt; e'</code></pre>
+<p>This is pretty powerful statement since it is so easy think of a function in calculus that has no fixpoint (say <code>f(x) = x + 1</code>). The proof of the statment is quite short - I copy down the proof in verbatim from the aforementioned paper:</p>
+<pre><code>Proof: Take e' to be (Y e) where Y, known as the Y combinator, 
+       is defined by
+                    Y = λf.(λx.f(x x))(λx.f(x x))
+       then
+                (Y e) = (λx.e(x x))(λx.e(x x))
+                      = e(λx.e(x x))(λx.e(x x))
+                      = e(Y e)
+  
+       so
+                  e'  = e e'
+</code></pre>
+<p>This is pretty cool. For one, the proof is almost trivial. Two, the proof is trivial because we were able to find this amazing little entity named y-combinator in the universe created in lambda calculus.</p>
+<p>Looking at y-combinator as this mystic creature of immense grace and utility is a more amusing. I mean, yes someone (namely Church) must have known what they were looking for and came up with a systematic way of deriving y-combinator (as we tried to do in the other post). But to think that we can define a set of axioms for our mathematical unvierse and see this beauty emerge from it - I can almost relate to God and the love for his creations.</p>
+<p>I’ll finish up this romantic post with another verbatim copy from the aforementioned paper to describe how we can use y-combinator to define recursive functions:</p>
+<pre><code>Consider recursive function f defined by:
+ 
+          f = ····f····
+ 
+This could be rewritten as
+ 
+          f = (λf.····f····)f
+
+where note that the inner occurence of f is now bound.
+This equation essentially says that f is a fixedpoint of
+the lambda expression (λf.····f····) - but that is
+exactly what Y computes for us, so we arrive at the 
+following non-recursive definition for f:
+
+          f = Y (λf.····f····)</code></pre>
+<h2 id="further-reading">further reading</h2>
+<p><a href="http://haskell.cs.yale.edu/?post_type=publication&amp;p=111">[1]</a></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>
