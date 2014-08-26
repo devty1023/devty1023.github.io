@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>thinking about types</h1>
+
+            <div class="info">
+    Posted on August 26, 2014
+    
+        by devty
+    
+</div>
+
+<p>Types have been creeping up in my life from all kinds of direction.</p>
+<p>It first stared with haskell when I saw that type annotation of a function, combined with a useful name, sometimes are enough to completely conceptually define a function (which sometimes eliminated a need for a documatation!). It made reasoning with programming an entertaining exercise of breaking the problem down to a collection of function signatures - not a novel concept but never more clear and easy as done in haskell.</p>
+<p>Then came my reading of an open source program for Python - a dynamically typed language - which was hampered by the lack of type annotation I had come to appreciate in Haskell. Not knowing the type of input the function expects and what the intended output is to be made reading of the code a very different process - a lot of jumping around the source code, trying to see through the coupling of functions. First time I felt mistreated by Python’s dynamic type system. Perhaps this mistreat meant is not entirely types own fault - maybe it was purely functional aspect - the quality it of being side-effect free - of Haskell that I missed more dearly.</p>
+<p>So came my interest in <a href="http://www.mypy-lang.org/">mypy</a>, a statically typed variant of Python 3. It’s a really interesting idea - mypy itself being a script that runs on top of python3 (you knoow, like <code>pip</code>) - that uses <a href="http://legacy.python.org/dev/peps/pep-3107/">PEP 3107 - Function Annotation</a> as it’s syntax so that a mypy program is fully python 3 compatible. Of course, following PEP 3107 will completely render your code Python 2.x incompatible, but I think the general trend is shifting towards python 3 anyway. <a href="https://mail.python.org/pipermail/python-ideas/2014-August/028618.html">Guido recently made some comment on mypy</a>, which for me validated my interest in mypy as something that I should consider with greater attention.</p>
+<p>Then today came <a href="http://lucumr.pocoo.org/2014/8/24/revenge-of-the-types/">Armin’s thoughts on optional typing in Python</a>, which I think is NOT an attack on bringing optional typing python but a call to attention on the lack of clear language specification and how this void will brew trouble in implementing an effective optional typing feature. I think Armin’s is more impressed with typed system moving towards a system that is able to infer type - and having a veneer of dynamic types - than on Python which has grown completely unfettered from types chaining itself with a watered down type system.</p>
+<h2 id="so..">so..</h2>
+<p>I do think statically typed languages, combined with type inference, is the sleekest language feature I will be looking out for. But to trying to imagine a complete but optional static type system in python feels <em>un-gestalt</em> - a whole less than the sum of its parts. Mypy does make programming in python a little bit more sloppy and yet to promise any performance gains that is the flagship in statically typed languages (the gap has been narrowed by JIT I belive, but the general consensus still is that dynamically typed languages are slow).</p>
+<p>Furthermore, some of the great advantages of dynamically typed languages - best outlined by <a href="http://tratt.net/laurie/research/pubs/html/tratt__dynamically_typed_languages/">Laurence Tratt here</a>- will be diluted with an optional type system. One such feature I will miss is the ease of refactoring my python code - a module can easily be refactored with new class names and internal structures given that I don’t remove any functionality the other modules depend on. I will be more than satisfied with python’s code being optionally typed annotated - with no enforcing of the annotation what so ever.</p>
+<h2 id="references">references</h2>
+<p>[<a href="http://www.mypy-lang.org/">1</a>][<a href="http://legacy.python.org/dev/peps/pep-3107/">2</a>][<a href="https://mail.python.org/pipermail/python-ideas/2014-August/028618.html">3</a>][<a href="http://lucumr.pocoo.org/2014/8/24/revenge-of-the-types/">4</a>][<a href="http://tratt.net/laurie/research/pubs/html/tratt__dynamically_typed_languages/">5</a>]</p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>
