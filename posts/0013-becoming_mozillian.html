@@ -26,7 +26,7 @@
         </div>
 
         <div id="content">
-            <h1>becoming mozillian</h1>
+            <h1>becoming a mozillian</h1>
 
             <div class="info">
     Posted on September  3, 2014
@@ -36,9 +36,9 @@
 </div>
 
 <p>I always liked the idea of contributing to an open source projects.</p>
-<p>But as with many things, making the first step towards my open source contribution was a difficult one. It’s intimidating - a large code repository with so many modules and so many functions. “I’m going to contribute!” doesn’t really work for most open source projects are not large enough to channel their precious resource to mentor new developers into their project.</p>
+<p>But as with many things, making that first step was a difficult one. It’s intimidating - a large code repository with many modules and many functions. “I’m going to contribute!” doesn’t really work for most open source projects are not large enough to channel their precious resource to mentor new developers into their project.</p>
 <p>I’m aware of few attempts to ease the pain of making your first contribution <a href="https://openhatch.org/search/?q=&amp;language=Python">[1]</a><a href="https://guides.github.com/activities/contributing-to-open-source/">[2]</a>, but what has worked for me is the <a href="https://www.mozilla.org/en-US/contribute/">Mozilla’s approach</a>. Mozilla has amazing amount of resource to get you familiar with the mozilla platform, things like friendly <a href="https://developer.mozilla.org/en-US/docs/Introduction">developer page</a>, comprehensive <a href="https://wiki.mozilla.org/Main_Page">wiki</a>, and good-ol’ <a href="http://chat.mibbit.com/?server=irc.mozilla.org">irc channel</a>.</p>
-<p>It was pretty clear to me that Mozilla actually dedicates a significant amount of their development effort to bring in aspiring open source contributors like myself. It’s very easy to find a bug sighting in <a href="https://bugzilla.mozilla.org">bugzilla</a> - mozilla’s bug tracking platform - tagged as “good first bug”. If you show any interest in helping out with one of their bug, one of Mozilla’s developer is quick to welcome you to the team and provides all the help you need to get you rolling. As you make your effort to produce a patch for the bug, the conversation you make with the developer is not like one between an outsider and an insider but between a mozillian to a mozillian. At the end, they make sure to return to you the full recognition for your work. And you want to do it again and start sniffing around for a new bug to squash.</p>
+<p>It was pretty clear to me that Mozilla actually dedicates a significant amount of their development effort to bring in aspiring open source contributors like myself. It’s very easy to find a bug sighting in <a href="https://bugzilla.mozilla.org">bugzilla</a> - mozilla’s bug tracking platform - tagged as “good first bug”. If you show any interest in helping out with one of their bugs, one of Mozilla’s developer is quick to welcome you to the team and provides all the help you need to get you rolling. As you make your effort to produce a patch for the bug, the conversation you make with the developer is not like one between an outsider and an insider but between a mozillian to a mozillian. At the end, they make sure to return to you the full recognition for your work. And you want to do it again and start sniffing around for a new bug to squash.</p>
 <p>It is a pleasant experience - and in a week’s time I’ve managed to submit two patches for mozilla <a href="https://github.com/mozilla/mozregression/commit/b74c52b6c72c73aa9bdd94c3f6f2f6f118bf8d8a">[1]</a><a href="https://github.com/gakiwate/titanic/commit/3fcd403c39c57d90356a026b96f4a74d5dab8846">[2]</a>. And I am certain of my continued contribution to mozilla.</p>
 <p>In an effort to make this post somewhat more than a diary post, I will share few tricks I needed to pick up to make my contributions to mozilla.</p>
 <h3 id="setting-up-your-environment">setting up your environment</h3>
@@ -51,7 +51,7 @@
 <h3 id="getting-a-patch-ready">getting a patch ready</h3>
 <p>At one point, you will want to get all the commits you’ve made reviewed by your mentor/bug owner. For me, they wanted the review in a form of a git patch. Git patch files are essentially <code>diff</code> + git meta-data, and you can directly upload this file on bugzilla for a review.</p>
 <p>Generating a git patch file is seemingly simple - just use <code>git format-patch master</code> to generate a patch file that <code>diff</code>s your branch and master’s branch.</p>
-<p>The problem arises when you’ve actually made couple of commits for a review - instead of generating a single patch file that a mozilla reviewer expects, <code>git format-patch master</code> command creates a patch files for each of the commits you’ve made. This is not good at all if you had made multiple commits to respond to your reviewer’s comments - they still want a single patch file to easily review your changes.</p>
+<p>The problem arises when you’ve actually made couple of commits for a review - instead of generating a single patch file that a mozilla reviewer expects, <code>git format-patch master</code> command creates a patch file for each of the commits you’ve made. This is not good at all if you had made multiple commits to respond to your reviewer’s comments - they still want a single patch file to easily review your changes.</p>
 <p>The setup I use to resolve this issue is to create another branch - I usually call it <ticket-###-delivery> - that “squashes” all the commits I made in my working branch (i.e. <ticket-###>) so that the command <code>git format-patch master</code> on this branch will generate a single patch file with all the commits. The “squashing” can be easily accomplished by</p>
 <ol style="list-style-type: decimal">
 <li>Branching from master</li>
@@ -60,7 +60,7 @@
 </ol>
 <p>The downside of this approach is that when you want to make yet another change to your working branch, you will have to delete your delivery branch and repeat the aforementioned process. There probably is a better way to do this, but I’m sticking with this method now since I don’t find it <em>too</em> cumbersome.</p>
 <h3 id="making-a-pull-request">making a pull request</h3>
-<p>Making a pull request is still a bit hard for me, and I’m rather pretty sure that there is a better way than I’m doing.</p>
+<p>Disclaimer: I’m sure that there is a better way of submitting a pull request than the one that I’m about to describe.</p>
 <p>Since the branches I made locally cannot be pushed to the repository, I actually fork the repository, apply the commits I made, and make a pull-request via github web interface. It’s best if the reviewer actually applies the patches you’ve been submitting on bugzilla directly.</p>
 <h3 id="useful-references">useful references</h3>
 <p><a href="https://wiki.mozilla.org/Auto-tools/Projects/MozBase">Mozbase development practice wiki</a></p>

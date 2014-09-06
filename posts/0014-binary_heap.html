@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>binomial heap</h1>
+
+            <div class="info">
+    Posted on September  6, 2014
+    
+        by devty
+    
+</div>
+
+<p>I’ve been making a very slow progressein reading <a href="https://www.cs.cmu.edu/~rwh/theses/okasaki.pdf">Okasaki’s book on purely functional data structures</a>, and I came across a particularly beautiful discussion on binomial heaps. Let me explain.</p>
+<h2 id="heap">heap</h2>
+<p>We often are interested in acquiring the minimum or maximum value in our collection of values, and <a href="http://en.wikipedia.org/wiki/Heap_%28data_structure%29">heap</a> is often our choice for supporting this type of behavior. Heaps are most commonly implemented as heap-ordered binary tree - a type of tree by which the element at each node is no larger/smaller than the elements of its children. In this way, the minimum/maximum element is always at the root of the tree.</p>
+<h2 id="binomial-heap">binomial heap</h2>
+<p>Perhaps less common implementation of heap (at least an implementation that was very novel to me) is the binomial heap. According to Okasaki, using binomial heap instead of the binary heap allows insert and merge to be run in O(1) time (!). Implementation of binomial heap is slightly more complex but a very intriguing one - we get to toy with some new structures and discover some beautiful tricks it can perform.</p>
+<h3 id="binomial-tree">binomial tree</h3>
+<p><img src="../images/0014_01.png" style="width:100%"><a href="http://en.wikipedia.org/wiki/Binomial_heap#mediaviewer/File:Binomial_Trees.svg">[1]</a></p>
+<p>Binomial trees can be inductively defined with the following two rules:</p>
+<ol style="list-style-type: decimal">
+<li>A binomial tree of rank 0 is a single node (as seen from above picture)</li>
+<li>A binomial tree of rank r+1 is formed by <em>linking</em> two binomial tree of rank r, making one tree the leftmost child of the other.</li>
+</ol>
+<p>Let’ that digest for a while. The above diagram really doesn’t help you understand rule (2), but it does gives clues for defining a second, equivalent definition of binomial trees - a binomial tree of rankr r is a node with r children, t1..tr, where each ti is a binomial tree of rank r-i. [2]</p>
+<p>One interesting thing to note about a binomial tree is that a tree with rank r has exactly 2^r number of nodes. We can easily verify this (by proof if you really want to. I would suggest proof by induction using either defnition).</p>
+<p>Let’s define this in haskell. For each node in a binomial tree, we will keep (1) rank, (2) its element, and (3) a list of children (which, as we noted in our secondary defnition will comprise r binary tree).</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">BTree</span> a <span class="fu">=</span> <span class="dt">BNode</span> <span class="dt">Integer</span> a [<span class="dt">BTree</span> a]</code></pre>
+<p>For our list of children, let’s enforce a rule to have it’s elements stored in decreasing order of rank while the elements themselves are stored in heap order. We can accomplish the latter by carefully defining our own <code>link</code> function to link trees with larger roots under trees with smaller roots. Remember that <code>link</code> function should only be called with two binomial tree with the same rank.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">link ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> <span class="dt">BTree</span> a <span class="ot">-&gt;</span> <span class="dt">BTree</span> a <span class="ot">-&gt;</span> <span class="dt">BTree</span> a
+link t1<span class="fu">@</span>(<span class="dt">BNode</span> r x1 c1) t2<span class="fu">@</span>(<span class="dt">BNode</span> _ x2 c2)   
+  <span class="fu">|</span> x1 <span class="fu">&lt;</span> x2   <span class="fu">=</span> <span class="dt">BNode</span> (r<span class="fu">+</span><span class="dv">1</span>) x1 (t2<span class="fu">:</span>c1)
+  <span class="fu">|</span> otherwise <span class="fu">=</span> <span class="dt">BNode</span> (r<span class="fu">+</span><span class="dv">2</span>) x2 (t1<span class="fu">:</span>c1)</code></pre>
+<h3 id="back-to-binomial-heap">back to binomial heap</h3>
+<p>We define binomial tree as a collection of heap-ordered binomial tree where no two tree in our collection has a same rank. We will maintain our list of binomial tree as a list with increasing order of rank.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"> <span class="dt">BHeap</span> a <span class="fu">=</span> [<span class="dt">BTree</span> a]</code></pre>
+<p>At first, this seems to be a very strange definition for a heap. After all, isn’t heap suppose be a collection of some elements?</p>
+<p>In fact, that what exactly <code>BHeap</code> offers, albeit unconventionally. A really nice way to think about our list of binomial tree is to think of binary numbers. Recall that a binomial tree with rank r has exactly 2^r nodes. And say our binomial heap contains a list of binary trees with rank 0, 1, and 2. How many elements does this translate to for our binomial heap?</p>
+<p>Simple calculation yields the following answer:</p>
+<pre><code>rank 0 + rank 1 + rank 2 
+=&gt; 2^0 + 2^1 + 2^2
+=&gt; 1 + 2 + 4
+=&gt; 7
+=&gt; 0x111</code></pre>
+<p>As Okasaki puts it [2]:</p>
+<blockquote>
+<p>Because each binomial tree contains 2^r elements and no two trees have the same rank, the trees in a binomial heap of size n corresponds exactly to the ones in the binary representation of n. For example, the binary representation of 21 is 10101, so a binomial heap of size 21 would contain one tree of rank 0, 2, and 4.</p>
+</blockquote>
+<p>This is an unusual way to keep scores of your element, but a very workable one. With this implementation, it’s not very difficult to write <code>insert</code>, <code>merge</code>, and <code>deleteMin</code> to serve as a heap.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">rank ::</span> <span class="dt">BTree</span> a <span class="ot">-&gt;</span> <span class="dt">Integer</span>
+rank (<span class="dt">BNode</span> r _ _) <span class="fu">=</span> r
+
+<span class="ot">insTree ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> <span class="dt">BTree</span> a <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a]
+insTree t [] <span class="fu">=</span> [t]
+insTree t ts<span class="fu">@</span>(t'<span class="fu">:</span>ts')
+  <span class="fu">|</span> rank t <span class="fu">&lt;</span> rank t' <span class="fu">=</span> t<span class="fu">:</span>ts
+  <span class="fu">|</span> otherwise        <span class="fu">=</span> insTree (link t t') ts
+
+<span class="ot">insert ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> a <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a]
+insert x ts <span class="fu">=</span> insTree (<span class="dt">BNode</span> <span class="dv">0</span> x []) ts</code></pre>
+<p>At first glance, <code>insTree</code> might appeae incomplete - for instance what if rank of <code>t</code> is greater than rank of <code>t'</code>? Formerly, we said that<code>link</code> should only be called for trees with same rank - wouldn’t <code>insTree</code> violate the usage of <code>link</code>?</p>
+<p>However, keep in mind that <code>insTree</code> is a internal helper function - it is only used by <code>insert</code> (and <code>merge</code> as we’ll see soon). By design, we will not be abusing <code>insTree</code> - our list of BTree is arranged in order of increasing rank, and because we start with a singleton with rank 0 (the lowest rank possible) and rank can be incremented at most by one, we cannot have a case where rank of <code>t</code> is greater than the rank of <code>t'</code>. (you can probably prove this by induction again)</p>
+<p>The worst case for our insert function is to insert into a heap of size n = 2^k - 1 (in binary - 1111..111) requiring call to <code>link</code> k times. Therefore the worst case runtime for <code>insert</code> is O(k) =&gt; O(log n).</p>
+<p>To merge two heaps together, we will go through two list of BTrees and link the trees with equal ranks as we go. (this is somewhat reminiscent of binary arithmetic)</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">merge ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a]
+merge ts1 [] <span class="fu">=</span> ts1
+merge [] ts2 <span class="fu">=</span> ts2
+merge ts1<span class="fu">@</span>(t1<span class="fu">:</span>ts1') ts2<span class="fu">@</span>(t2<span class="fu">:</span>ts2')
+  <span class="fu">|</span> rank t1 <span class="fu">&lt;</span> rank t2 <span class="fu">=</span> t1<span class="fu">:</span>(merge ts1' ts2) 
+  <span class="fu">|</span> rank t2 <span class="fu">&lt;</span> rank t1 <span class="fu">=</span> t2<span class="fu">:</span>(merge ts1 ts2')
+  <span class="fu">|</span> otherwise         <span class="fu">=</span> insTree (link t1 t2) (merge ts1' ts2')</code></pre>
+<p>Now let’s move on to the meat of heap interface - <code>findMin</code> and <code>deleteMin</code>. Okasaki suggests defining an auxiliary function <code>removeMinTree</code> that finds the binomial tree with the minimum root value and removes it from the list.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">root ::</span> <span class="dt">BTree</span> a <span class="ot">-&gt;</span> a
+root (<span class="dt">BNode</span> _ x1 _) <span class="fu">=</span> x1
+
+<span class="ot">removeMinTree ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">=&gt;</span> (<span class="dt">BTree</span> a, [<span class="dt">BTree</span> a])
+removeMinTree [t] <span class="fu">=</span> (t, [])
+removeMinTree (t<span class="fu">:</span>ts) <span class="fu">=</span>
+  <span class="kw">if</span> (root t) <span class="fu">&lt;</span> (root t') <span class="kw">then</span> (t, ts) <span class="kw">else</span> (t', t<span class="fu">:</span>ts')
+    <span class="kw">where</span> (t', ts') <span class="fu">=</span> removeMinTree ts</code></pre>
+<p>It looks tricky, but the code itself is very straightforward. The key is to remember that we always create binomial trees with <code>link</code> function and that our implementation of <code>link</code> always maintains the smallest element of a given binomial tree at its root.</p>
+<p>With this, <code>findMin</code> becomes a one liner:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">findMin ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">-&gt;</span> a
+findMin ts <span class="fu">=</span> root t <span class="kw">where</span> (t, _) <span class="fu">=</span> removeMinTree ts</code></pre>
+<p><code>deleteMin</code> is a bit more involved. By removing the root of a binomial tree, we are left with a headless tree. But recall the headless binomial tree of rank r is simply a collection of heap-ordered binomial tress of rank 0 to r-1. By reversing this collection (we collect binomial trees in a decreasing order), we get a list of binomial trees in increasing rank - also known as binomial heap!</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">deleteMin ::</span> (<span class="dt">Ord</span> a) <span class="ot">=&gt;</span> [<span class="dt">BTree</span> a] <span class="ot">-&gt;</span> [<span class="dt">BTree</span> a]
+deleteMin ts <span class="fu">=</span> merge (reverse ts1) ts2
+               <span class="kw">where</span> ((<span class="dt">BNode</span> _ x ts1), ts2) <span class="fu">=</span> removeMinTree ts</code></pre>
+<h2 id="references">references</h2>
+<p><a href="http://en.wikipedia.org/wiki/Heap_%28data_structure%29">[1]</a> Wikipedia. <em>Binomial Heap</em></p>
+<p><a href="https://www.cs.cmu.edu/~rwh/theses/okasaki.pdf">[2]</a> Okasaki. <em>Purely Functional Data Structure</em></p>
+<p><em>end of message</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>
