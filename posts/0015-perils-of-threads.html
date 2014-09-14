@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>perils of threads</h1>
+
+            <div class="info">
+    Posted on September 14, 2014
+    
+        by devty
+    
+</div>
+
+<p>My current internship is a bit peculiar in that I work on many small bits of tasks (each lasting 3~4 days) rather than a couple of large projects (lasting few weeks). I am more of a software support/consultant for our lab - doing bit of work in automation, continuous integration, core library, script writing, etc. etc. for whatever request that is submitted in the ticket.</p>
+<p>Last week, an interesting request came up.</p>
+<p>This one had the vaguest title of all the ticket’s I’ve ever received: “Find the root cause of remote object creation failure”. But I had heard about this pernicious bug - it was a bug that surfaced when I first started my internship 9 months ago and had been unresolved ever since. Not that we were incompetent in solving this issue - this bug was observed only once in a while by some person in the lab every few weeks or so. And it had a very simple workaround - restart the application that was causing the issue. Infrequent bug + a simple workaround + no lead on the root cause warranted a low priority for months.</p>
+<p>But last week, this bug became a blocking issue - our power management testing team who had recently adopted our test automation infrastructure was bombarded with it. Of course, the workaround was still valid, but it completely invalidated the “automation” aspect of our testing environment. The team that was being blocked - the power management test execution team - often had a very long list of test they would let it run overnight or over the weekend. And now, they would come back to work to find that their test list had only partially ran because at one point in the list the bug had surfaced and interrupted the automation. Unless someone was there to restart the testing application when the bug crawled up, the team could NOT get their entire test list to run. This was a severe problem, and they were pleading the software team to take a look at the issue again.</p>
+<p>Our lab manager wanted a fresh set of eyes to look at the issue, and I was the freshest out of all. So the ticket was mine - and I had about a weeks worth time to take a stab at the issue.</p>
+<h2 id="the-problem">the problem</h2>
+<p>To give a little bit of a background, our test automation comprises two computer - one acts like a commander while the other is being tested. The “remote object creation failure” simply meant that the commander had failed to send a command to the testing machine.</p>
+<p>Here is what was known:</p>
+<ol style="list-style-type: decimal">
+<li><p>The issue was observed sporadically. There was no known way of replicating the issue other than to run some test and to hope that it appears.</p></li>
+<li><p>The exception traceback revealed that the tcp connection between the commander and the testing machine was broken. Specifically, the commander reported that there was nothing listening at the tcp address it was looking for a connection.</p></li>
+<li><p>A simple workaround was to restart the testing application on the testing system.</p></li>
+<li><p>The power management tests was particularly prone to this bug.</p></li>
+</ol>
+<h2 id="first-attempt">first attempt</h2>
+<p>I was focusing on (2) + (4). The power management tests, by nature, cycled the power of the testing system continuously, and my guess was that abrupt closing of the TCP channel was stressing the system and finally breaks it. I made the effort to properly clean up the channels before the testing system was shut down… and voila! bug was still spotted :(.</p>
+<p>I later learned that another engineer who stabbed at the problem long time ago tried stressing the system by creating hundreds of channels simultaneously, and the network was able to handle it. It seemed that our network was not the issue.</p>
+<h2 id="another-stab">another stab</h2>
+<p>My next hypothesis was one of timing. The exception trace kept telling us that nothing is listening at the client side - maybe we should give some time before trying to make a connection. Maybe power cycling required the client to initialize the tcp channel, and sometimes it just took longer than others.</p>
+<p>So I tried putting in a 10 second delay before we made any remote command to the testing machine. Unfortunately, this made it longer to replicate the issue (every single command now took 10 seconds longer), and it also did not fix the issue.</p>
+<h2 id="a-different-direction">a different direction</h2>
+<p>We were all puzzled as to why (3) would fix the issue, so I decided to scrutinize the testing application that was running at the testing system.</p>
+<p>I started shifting through the logs of the testing application to see if there was any difference I can detect in a log of a normal run and the one of a buggy run. Everything looked normal..until I saw an IndexOutOfBounds exception on the buggy log! I tried looking at the code that was producing this error and found the following code:</p>
+<pre><code>for (int i = 0; i &lt; _someList.Count; ++i) 
+{
+    do_something(_someList[i])
+}</code></pre>
+<p>which at first glance seems impossible of producing IndexOutOfBounds exception. Unless…</p>
+<h2 id="threads">threads</h2>
+<p>So the original writer of the testing application used threads to boost the speed of initializing the application. Which is a great concept - there was tens of services that had to be initialize for the service (tcp channel being one of them), and it is always great to have it done parallel so that the user doesn’t have to wait as long.</p>
+<p>That is, if you do it right. Upon investigating the code, I found that a variable was not being properly protected and producing a race condition. Furthermore, this application had some complex error handling cases, and this service initialization error was being handled and being hidden - unless someone looked at the log, we wouldn’t know whether the initialization was successful or not.</p>
+<p>Threads perfectly explained all of our observation:</p>
+<ol style="list-style-type: decimal">
+<li><p><em>The issue was observed sporadically</em> - thread bugs are hard to reproduce precisely for this reason. For the most run, our thread was fine, but a specific sequence of failure in our thread would cause a problem and result in a buggy run.</p></li>
+<li><p><em>TCP channel between the commander and the testing machine was broken</em> - so nothing was at fault at the commander side. It was the testing machine that was actually NOT listening for the tcp connection since it failed to initialize that service.</p></li>
+<li><p><em>Restarting application solves the problem</em> - this is related to (1) in that the threaded code works for the most of the time. It is theoretically possible for the restart to not fix the issue, but that would be incredibly rare.</p></li>
+<li><p><em>Power management was particularly prone to this bug</em> - this was the case since power management test would restart the testing system hundreds of times. For every restart, we would have to restart the testing application, and the testing application was bound to fail to initialize in at least one of those restarts. Other test execution teams did not have to restart the testing application so frequently - hence they only saw the issue sporadically.</p></li>
+</ol>
+<h2 id="resolution">resolution</h2>
+<p>To test this promising hypothesis, I simply fixed the number of threads that would be produced to 1 to remove any possibility of racing condition. And I am very pleased to report that we haven’t seen the bug for the last day :).</p>
+<p>And I also discovered that the performance improvement via threading was minuscule - perhaps less than a second - which is very acceptable in our testing environment. A half a second addition to the application initialization is scarcely anything.</p>
+<p>So a lesson for me - threaded application is hard. Unless the performance increase via threading is effective and critical, try to save yourself the trouble.</p>
+<p><em>end of message</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>
