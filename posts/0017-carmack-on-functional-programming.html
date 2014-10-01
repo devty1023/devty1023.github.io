@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>devty</title>
+        <link rel="stylesheet" type="text/css" href="../css/default.css" />
+        <link rel="stylesheet" type="text/css" href="../css/syntax.css" />
+        <link href="http://fonts.googleapis.com/css?family=PT+Serif:400,700,400italic,700italic" rel="stylesheet" type="text/css">
+        <!-- favicon settings -->
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-196x196.png" sizes="196x196">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-160x160.png" sizes="160x160">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-96x96.png" sizes="96x96">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-16x16.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="../images/favicons/favicon-32x32.png" sizes="32x32">
+
+
+    </head>
+    <body>
+      <div id="main">
+        <div id="sidebar">
+          <h1>devty:</h1>
+          <a href="../">home</a>
+          <a href="../about.html">about</a>
+          <a href="../archive.html">archive</a>
+        </div>
+
+        <div id="content">
+            <h1>carmack on functional programming</h1>
+
+            <div class="info">
+    Posted on September 30, 2014
+    
+        by devty
+    
+</div>
+
+<p>I had always perceived functional programming as derivative of an academic exercise - immensely stimulating but practically of minute concern.</p>
+<p>So it came to me as great surprise to discover <a href="https://twitter.com/ID_AA_Carmack">John Carmack</a>, you know THE John Carmack, making some <a href="http://gamasutra.com/view/news/169296/Indepth_Functional_programming_in_C.php">comments on functional programming</a>. This is a person who I had previously assumed to be coding in bits, doing things at the extremity of low-level programming.</p>
+<p>In the end John Carmack is a software engineer, and he is plainly commenting on the benefits functional programming offers over the imperative style. He is not asking everyone to abandon c/c++ in favor of Lisp and Haskell but wants to utilize the strengths those non-mainstream languages exercises with its functional style.</p>
+<p>A brief summary of his post:</p>
+<ol style="list-style-type: decimal">
+<li><p><em>pure functions are nice</em> And Have no <em>side effects</em> - it is a well-defined function (in mathematical sense) where a given input has one possible output regardless of the environmental condition. Composing a program with pure functions have nice benefits - thread safety, trivial transition to parallel implementation, reusability in new environment (as it is agnostic to the environment), testability since it is very simple to generate a test case to guarantee its behavior. Pure functions tends be stylish and rather easy to understand - it is usually a nicely defined unit with an acute intention. It also opens the door for formal verification. Pure functions are concrete enough to make general formal statement about it.</p></li>
+<li><p><em>real things can’t be pure</em> And it doesn’t have to be. There is a continuum of value in purity of functions - moving towards purity and reaping the benefits is still better than completely entangled spaghetti code. Note that moving towards purity by disentangling functions from the environment may result in code verbosity - now you have to completely encapsulate the environmental variable and pass them as a parameter of your pure functions. Conciseness is often a characteristic of functional programming, and this verbosity may seem a bit curious. But the factors that renders functional programs succinct are often orthogonal to the use of pure functions - it’s the language’s built-in types, pattern matching, list comprehensions, function compositions, and syntactic sugars that are the greatest contributor to the compactness of code in those languages.</p></li>
+<li><p><em>OOP is inherently not functional</em> Mutating object is the lesson 0 of in object oriented paradigm - and counter to the functional programming style. You can try, but it’s just weird.</p></li>
+<li><p><em>functional style may be slower but..</em> perhaps not. Yes directly mutating values in memory is faster, but consider two points. One we’ve always been willing to sacrifice few points on performance for productivity. Second, pure functions invites parallel programming - so not all is lost.</p></li>
+</ol>
+<p>I’m pretty certain we’ll see more and more of functional paradigm entering the mainstream programming community.</p>
+<p><em>end of message</em></p>
+
+        </div>
+        <div id="footer">
+            Site proudly generated by
+            <a href="http://jaspervdj.be/hakyll">Hakyll</a>
+        </div>
+      </div>
+    </body>
+</html>
